@@ -581,5 +581,59 @@ This document serves as a persistent step-by-step implementation log to track co
     - Replaced single-channel `Serial1.println` with `log_println` so setup completion reaches both USB and UART streams.
 - **Checkpoint Status:** CHECKPOINT #31 (Project-Wide Dual-Stream Logging & Safety Diagnostics Verified).
 
+---
 
+## 2026-09-11: Two-Target Firmware Architecture Refactor & EEZ Studio Export Alignment
 
+### Entry #032 — Refactored Architecture into Controller & UI Firmware with Shared Protocol Core
+- **Goal:** Split Tejasvini from a monolithic single-Pico sketch into two independently buildable targets:
+  1. `Tejasvini_Controller`: RP2350B machine controller holding sole safety and hardware authority (heaters, dual NTCs, dual fans, buzzer, ARGB, encoder, SSR).
+  2. `Tejasvini_UI`: RP2040 CrowPanel display terminal holding UI/touch responsibility (PicoDVI, GT911, LVGL 8.3) with zero safety authority.
+  3. `shared`: Shared protocol types, serialization, error codes, and baud rate configurations.
+- **Files Created / Migrated:**
+  - Shared Core (`firmware/shared/`):
+    - `Types.h` / `Types.cpp`: State, reflow profiles, stage enums, and string conversions.
+    - `ErrorCodes.h` / `ErrorCodes.cpp`: Fault codes, severities, and error names.
+    - `ProtocolVersion.h`: Protocol version constants (`TEJASVINI_PROTOCOL_VERSION_MAJOR = 1`).
+    - `Config.h`: Shared baud rate (115200), timing limits, safe temperature bounds.
+    - `Protocol.h` / `Protocol.cpp`: Command and Status packet structures and parsers.
+    - `Serialization.h` / `Serialization.cpp`: Line-oriented serialization and key-value tokenizers.
+  - Machine Controller (`firmware/Tejasvini_Controller/`):
+    - `Tejasvini_Controller.ino`: Controller entry point and non-blocking cooperative loop.
+    - `ControllerConfig.h`: RP2350B GPIO mappings, PI gains, ADC constants, safety limits.
+    - `ControllerApp.h` / `ControllerApp.cpp`: Master subsystem coordinator and loop scheduler.
+    - `MachineStateMachine.h` / `MachineStateMachine.cpp`: Autonomous state transitions.
+    - `ProfileEngine.h` / `ProfileEngine.cpp`: Reflow profiles and profile target curve.
+    - `ThermalManager.h` / `ThermalManager.cpp`: Closed-loop PI controller, soft-start ramp, thermal runaway detector.
+    - `TemperatureManager.h` / `TemperatureManager.cpp`: Multi-channel NTC acquisition and divergence detection.
+    - `NtcSensor.h` / `NtcSensor.cpp`: Beta model temperature conversion and raw ADC bounds checks.
+    - `HeaterController.h` / `HeaterController.cpp`: Time-proportioning SSR actuation strictly clamped to 40% duty cycle.
+    - `FanController.h` / `FanController.cpp`: Dual fan 25 kHz PWM drive and cooling manager.
+    - `Tachometer.h` / `Tachometer.cpp`: Fan tachometer pulse capture and RPM calculation.
+    - `EncoderManager.h` / `EncoderManager.cpp`: Rotary encoder quadrature decoding and debounced push button.
+    - `BuzzerManager.h` / `BuzzerManager.cpp`: Audible alerts and alarm patterns.
+    - `ArgbManager.h` / `ArgbManager.cpp`: Status LED visual cues.
+    - `UartTransport.h` / `UartTransport.cpp`: Non-blocking ring buffer UART transport.
+    - `CommandParser.h` / `CommandParser.cpp`: Command validation, safety check, and dispatch.
+    - `StatusPublisher.h` / `StatusPublisher.cpp`: Periodic STATUS packet broadcaster (5 Hz / 200 ms).
+    - `WatchdogManager.h` / `WatchdogManager.cpp`: Hardware watchdog supervisor.
+  - Display UI Terminal (`firmware/Tejasvini_UI/`):
+    - `Tejasvini_UI.ino`: CrowPanel entry point.
+    - `UiConfig.h`: Display, touch, and UART pin mappings.
+    - `UiApp.h` / `UiApp.cpp`: UI lifecycle manager.
+    - `DisplayManager.h` / `DisplayManager.cpp`: PicoDVI display driver and LVGL 8.3 bridge.
+    - `TouchManager.h` / `TouchManager.cpp`: GT911 touch coordinate driver.
+    - `StatusModel.h` / `StatusModel.cpp`: Cached state model for LVGL variables.
+    - `ProtocolClient.h` / `ProtocolClient.cpp`: Non-blocking UART client and 5-second comms watchdog.
+    - `UiBridge.h` / `UiBridge.cpp`: C-linkage bridge to UI events and variables.
+    - `UiActions.cpp`: Handwritten implementations of EEZ Studio event callbacks (`action_on_start_stop`, `action_on_setpoint_inc`, etc.).
+    - `UiVars.cpp`: Handwritten implementations of EEZ Studio variable getters/setters (`get_var_actual_temp`, etc.).
+    - `ui/`: Strictly EEZ Studio generated UI files (`ui.c`, `screens.c`, `images.c`, `fonts.c`, `styles.c`, etc.).
+  - EEZ Studio Export Update:
+    - `ui.eez-project`: Updated `"destinationFolder": "firmware/Tejasvini_UI/ui"` to ensure future exports write directly to the UI firmware source tree.
+  - Repository Cleanup:
+    - Removed obsolete `src/` directory and root `Tejasvini.ino`.
+    - Removed obsolete `docs/lvgl/`.
+  - Automated Host Test Suite (`test/`):
+    - Added CMake-based CTest suite with 4 test targets covering protocol parsing, key-value serialization, state machine transitions, and full UART end-to-end command/telemetry simulation.
+- **Checkpoint Status:** CHECKPOINT #32 (Two-Target Architecture, Cleanup, EEZ Studio Export Alignment & Automated Tests Verified).

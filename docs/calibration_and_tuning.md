@@ -14,24 +14,21 @@ While nominal 100kΩ resistors are specified, standard 1% resistors can vary bet
 **To calibrate:**
 1. Power off the system and disconnect the thermistor plug.
 2. Measure the actual resistance between the ADC pin (GPIO 26 or GPIO 27) and GND using a calibrated 4.5-digit or 5.5-digit Digital Multimeter (DMM).
-3. If your measured resistance is e.g. $99{,}400\,\Omega$, update `R_DIVIDER` in [`src/config.h`](file:///Users/jrsarath/Documents/GitHub/Tejasvini/src/config.h):
+3. If your measured resistance is e.g. $99{,}400\,\Omega$, update `R_DIVIDER` in [`firmware/Tejasvini_Controller/ControllerConfig.h`](../firmware/Tejasvini_Controller/ControllerConfig.h):
    ```c
    #define R_DIVIDER 99400.0f // Measured divider resistance in Ohms
    ```
 
 ### 1.2 Verifying Sensor Readings at Ambient
-1. Connect both thermistors and boot the firmware.
-2. Open the serial terminal at 115200 baud. The boot banner and initial reading will log:
-   ```text
-   [Thermal] Initialized: NTC1=24.8C (2048 ADC, 100120R), NTC2=25.0C (2046 ADC, 99950R)
-   ```
-3. Verify that both readings match the room ambient temperature measured by a reference thermometer within $\pm 1.0^\circ\text{C}$.
+1. Connect both thermistors and boot the machine controller.
+2. Open the serial terminal at 115200 baud on the controller USB CDC or UART.
+3. Verify that both NTC1 and NTC2 readings match the room ambient temperature measured by a reference thermometer within $\pm 1.0^\circ\text{C}$.
 
 ---
 
 ## 2. PI Controller Tuning
 
-Tejasvini utilizes a proportional-integral (PI) regulator with soft-start reference ramping. The controller constants are defined in `src/config.h`:
+Tejasvini utilizes a proportional-integral (PI) regulator with soft-start reference ramping. The controller constants are defined in [`firmware/Tejasvini_Controller/ControllerConfig.h`](../firmware/Tejasvini_Controller/ControllerConfig.h):
 
 ```c
 #define KP_GAIN 1.5f  // Proportional gain
@@ -39,7 +36,7 @@ Tejasvini utilizes a proportional-integral (PI) regulator with soft-start refere
 ```
 
 ### 2.1 Understanding Controller Parameters
-* **`RAMP_RATE_DEG_PER_SEC` ($1.5^\circ\text{C}/\text{s}$)**: Soft-start ramp speed. The setpoint gradually climbs toward the target rather than stepping instantly, preventing overshoot and thermal shock.
+* **`RAMP_RATE_DEG_PER_S` ($1.5^\circ\text{C}/\text{s}$)**: Soft-start ramp speed. The setpoint gradually climbs toward the target rather than stepping instantly, preventing overshoot and thermal shock.
 * **`KP_GAIN` ($1.5$)**: Reacts immediately to temperature error.
   * *Too high:* The plate will oscillate around the target temperature by $\pm 3^\circ\text{C}$ to $5^\circ\text{C}$.
   * *Too low:* The plate will respond sluggishly and take too long to reach the target.
@@ -61,20 +58,20 @@ If using a heavier aluminum plate (e.g. 100mm $\times$ 100mm $\times$ 10mm thick
 The thermal runaway monitor protects against detached thermistors or failing SSRs:
 
 ```c
-#define SAFETY_PERIOD 18000 // Check window in milliseconds (18 seconds)
-#define SAFETY_THRESHOLD 2.0f // Minimum required temperature rise (°C)
+#define THERMAL_RUNAWAY_PERIOD_MS 18000 // Check window in milliseconds (18 seconds)
+#define THERMAL_RUNAWAY_MIN_RISE  2.0f  // Minimum required temperature rise (°C)
 ```
 
 ### Tuning Considerations:
 * When driving $\ge 20\%$ duty with a deficit $> 10^\circ\text{C}$, temperature must rise by at least `2.0°C` every `18` seconds.
 * If you operate an unusually heavy, uninsulated heatplate or operate in cold ambient environments ($< 10^\circ\text{C}$), the rise rate near 200°C might slow down.
-* If a false thermal runaway trip occurs on a very heavy plate, increase `SAFETY_PERIOD` to `25000` (25 seconds). Never disable the check entirely.
+* If a false thermal runaway trip occurs on a very heavy plate, increase `THERMAL_RUNAWAY_PERIOD_MS` in [`firmware/shared/Config.h`](../firmware/shared/Config.h). Never disable the check entirely.
 
 ---
 
 ## 4. Customizing Reflow Soldering Profiles
 
-Reflow profile parameters reside in `src/display_manager.cpp` in `g_profile_configs`:
+Reflow profile parameters reside in [`firmware/Tejasvini_Controller/ProfileEngine.cpp`](../firmware/Tejasvini_Controller/ProfileEngine.cpp) in `kProfileConfigs`:
 
 ```cpp
 struct ProfileStageConfig {

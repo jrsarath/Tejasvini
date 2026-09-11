@@ -28,23 +28,14 @@ This document outlines the electrical connections, sensor circuits, solid-state 
 
 ---
 
-## 2. Hardware Pinout Table
+## 2. Hardware Pinout Overview
 
-| Signal | RP2040 GPIO Pin | Hardware Header / Function | Notes |
-| :--- | :--- | :--- | :--- |
-| `PIN_ENA` | GPIO 2 | Rotary Encoder Phase A | Internal `INPUT_PULLUP` enabled |
-| `PIN_ENB` | GPIO 3 | Rotary Encoder Phase B | Internal `INPUT_PULLUP` enabled |
-| `PIN_EBT` | GPIO 28 | Rotary Encoder Push-Button | Internal `INPUT_PULLUP` enabled (Active LOW) |
-| `PIN_SSR` | GPIO 22 | Solid State Relay Output | 3.3V Logic Drive (Time-Proportioning) |
-| `PIN_NTC1` | GPIO 26 | Primary Thermistor (ADC0) | 12-bit ADC, 100kΩ divider to GND |
-| `PIN_NTC2` | GPIO 27 | Secondary Thermistor (ADC1) | 12-bit ADC, 100kΩ divider to GND |
-| `PIN_BACKLIGHT`| GPIO 24 | Display Backlight Control | Active LOW (driven LOW to illuminate) |
-| `TOUCH_SDA` | GPIO 20 | GT911 Touch Controller I2C SDA | Requires 4.7kΩ pullups to 3.3V |
-| `TOUCH_SCL` | GPIO 21 | GT911 Touch Controller I2C SCL | Requires 4.7kΩ pullups to 3.3V |
-| `TOUCH_INT` | GPIO 25 | GT911 Touch Controller Interrupt | Configured in `src/touch.h` |
-| `TOUCH_RST` | GPIO 29 | GT911 Touch Controller Reset | Configured in `src/touch.h` |
-| `SERIAL_TX` | GPIO 0 | Telemetry UART TX (`Serial1`) | 115200 baud, 8N1 |
-| `SERIAL_RX` | GPIO 1 | Telemetry UART RX (`Serial1`) | 115200 baud, 8N1 |
+Tejasvini employs a dual-board configuration:
+1. **CrowPanel 4.3" DVI UI Display** (RP2040): Drives PicoDVI, capacitive touch (GT911), backlight, and communicates via UART0 (GP0 TX / GP1 RX).
+2. **Custom Machine Controller Board** (RP2350B): Controls the SSR (GP22), safety relay (GP23), NTC thermistors (GP26/27/28), cooling fans (GP6/7/8/9), buzzer (GP10), ARGB (GP11), rotary encoder (GP2/3/4), and connects to CrowPanel via UART (GP32 TX / GP33 RX).
+
+For complete pin-by-pin specifications and schematics, refer to:
+👉 **[docs/hardware-pin-map.md](hardware-pin-map.md)**
 
 ---
 

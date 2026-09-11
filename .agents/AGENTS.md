@@ -6,15 +6,19 @@ This document provides developer guidelines, architectural rules, hardware speci
 
 ## 1. Project Overview
 
-**Tejasvini** is an open-source heatplate controller designed for SMD/SMT soldering and reflow work. It runs on a **Raspberry Pi Pico (RP2040)** paired with an **Elecrow 4.3" Pico DVI Display** running a high-resolution native LVGL UI (`src/ui/`).
+**Tejasvini** is an open-source heatplate controller designed for SMD/SMT soldering and reflow work. The firmware is structured into **two independently buildable targets** with **one shared protocol specification**:
 
-### Key Hardware Specifications
-* **MCU:** Raspberry Pi Pico (RP2040 dual ARM Cortex-M0+ microcontroller)
-* **Heater Element:** 400W PTC Heatplate driven via a 3.3V Logic Solid State Relay (SSR)
-* **Temperature Sensors:** Dual 100K NTC Thermistors in voltage dividers ($R_{\text{divider}} = 100\text{k}\Omega$, $R_0 = 100\text{k}\Omega$, $\beta = 3950$, $T_0 = 298.15\text{K}$)
-* **User Input:** EC11 Rotary Encoder with integrated push-button & Capacitive Touchscreen (GT911 driver)
-* **Display:** 400x240 RGB display output driven via PicoDVI (`DVIGFX16`, 2x scaled to 800x480 on Elecrow CrowPanel RTD2281, rendered in 240x400 Portrait Mode)
-* **Telemetry:** USB CDC Serial and Serial1 UART (TX: GPIO 0, RX: GPIO 1) at 115200 baud
+1. **Tejasvini UI Firmware (`firmware/Tejasvini_UI/`)**:
+   * **MCU:** Raspberry Pi Pico (RP2040 dual ARM Cortex-M0+)
+   * **Display:** 400x240 RGB display output driven via PicoDVI (`DVIGFX16`, 2x scaled to 800x480 on Elecrow CrowPanel RTD2281, rendered in 240x400 Portrait Mode)
+   * **Touch:** GT911 Capacitive Touchscreen (I2C: GP20 SDA, GP21 SCL)
+   * **Role:** Pure HMI terminal; sends high-level commands, displays telemetry, has zero safety authority.
+2. **Tejasvini Controller Firmware (`firmware/Tejasvini_Controller/`)**:
+   * **MCU:** Custom RP2350B machine controller board
+   * **Heater Element:** 400W PTC Heatplate driven via a 3.3V Logic Solid State Relay (SSR, GPIO 22)
+   * **Temperature Sensors:** Redundant 100K NTC Thermistors (NTC1: ADC0/GP26, NTC2: ADC1/GP27, NTC3: ADC2/GP28)
+   * **Cooling Fans:** Dual 25 kHz 4-wire PWM fan control with tachometer pulse RPM capture
+   * **Role:** Sole machine authority and safety supervisor.
 
 ---
 
@@ -22,91 +26,143 @@ This document provides developer guidelines, architectural rules, hardware speci
 
 ```text
 Tejasvini/
-├── Tejasvini.ino             # Main Arduino firmware sketch (setup & cooperative non-blocking loop)
-├── CMakeLists.txt            # Root CMake build definition
+├── CMakeLists.txt            # Root CMake build definition (builds host test suite)
 ├── LICENSE                   # MIT License
 ├── README.md                 # Project documentation & hardware BOM
 ├── CONTRIBUTING.md           # Contribution & coding standards guide
 ├── CODE_OF_CONDUCT.md        # Contributor Covenant Code of Conduct
 ├── AGENTS.md                 # Developer & AI agent architectural guide (this file)
 ├── ui.eez-project            # EEZ Studio LVGL project source file
-├── assets/                   # Hardware assets & 3D models
-│   └── 3d files/             # 3D printable STL enclosure models & aluminum plate CAD reference
-├── docs/                     # Technical documentation & schematics
-│   ├── architecture.md       # Detailed software architecture & state machines
-│   ├── hardware_and_safety.md# Pinout, NTC voltage divider math, SSR & safety fuses
-│   ├── calibration_and_tuning.md # PI loop tuning & sensor calibration
-│   └── implementation_log.md # Historical engineering & memory optimization log
-└── src/
-    ├── config.h              # Hardware pinout, thermal constants, timer & safety parameters
-    ├── display_manager.h/.cpp# PicoDVI display driver, LVGL bridge, reflow state machine
-    ├── input_handler.h/.cpp  # Debounced encoder push-button & quadrature encoder decoding
-    ├── telemetry.h/.cpp      # Serial UART & USB CDC telemetry logging
-    ├── thermal_control.h/.cpp# Dual NTC ADC acquisition, PI regulator, SSR PWM, safety
-    ├── touch.h/.cpp          # Touch controller abstraction (GT911)
-    └── ui/                   # EEZ Studio generated LVGL 8.3 UI implementation
-        ├── actions.c/.h      # UI event callbacks (setpoint, toggle, cycle profile)
-        ├── screens.c/.h      # Screen layout & widget tree
-        ├── styles.c/.h       # Color themes & visual styles
-        ├── vars.h            # Native UI variable getters and setters
-        └── ui.c/.h           # UI initialization & tick dispatcher
+│
+├── firmware/
+│   ├── shared/               # Shared protocol, error codes, and configuration
+│   │   ├── Config.h          # Shared timing, temperature bounds, baud rate
+│   │   ├── Types.h / .cpp    # Machine states, reflow profiles, stage enums
+│   │   ├── ErrorCodes.h/.cpp # Fault codes and severity levels
+│   │   ├── ProtocolVersion.h # Protocol versioning constants
+│   │   ├── Protocol.h / .cpp # Command, status, and response packet definitions
+│   │   └── Serialization.h/.cpp # Wire formatting and key-value tokenizers
+│   │
+│   ├── Tejasvini_UI/         # UI Firmware Target (CrowPanel RP2040)
+│   │   ├── Tejasvini_UI.ino  # UI entry point
+│   │   ├── UiConfig.h        # Display, touch, and UART pin assignments
+│   │   ├── UiApp.h / .cpp    # UI lifecycle manager
+│   │   ├── DisplayManager.h/.cpp # PicoDVI & LVGL 8.3 display bridge
+│   │   ├── TouchManager.h/.cpp   # GT911 touch coordinate driver
+│   │   ├── StatusModel.h/.cpp    # Cached state model for LVGL variables
+│   │   ├── ProtocolClient.h/.cpp # Non-blocking UART client & heartbeat monitor
+│   │   ├── UiBridge.h / .cpp # C-linkage bridge to UI events and variables
+│   │   └── ui/               # EEZ Studio generated LVGL UI screens and styles
+│   │
+│   └── Tejasvini_Controller/ # Machine Controller Target (RP2350B)
+│       ├── Tejasvini_Controller.ino # Controller entry point
+│       ├── ControllerConfig.h# RP2350B pinout, safety thresholds, PI gains
+│       ├── ControllerApp.h/.cpp # Subsystem coordinator & loop scheduler
+│       ├── MachineStateMachine.h/.cpp # State machine (BOOTING, IDLE, HEATING, etc.)
+│       ├── ProfileEngine.h/.cpp # Profile parameters & reflow curves
+│       ├── ThermalManager.h/.cpp# Closed-loop PI regulator & soft-start ramp
+│       ├── TemperatureManager.h/.cpp # Multi-channel NTC acquisition & checks
+│       ├── NtcSensor.h / .cpp# Steinhart-Hart / Beta conversion & filtering
+│       ├── HeaterController.h/.cpp # Time-proportioning SSR actuation (max 40%)
+│       ├── FanController.h/.cpp # Dual fan PWM drive and cooling management
+│       ├── Tachometer.h / .cpp # Dual fan tachometer pulse capture / RPM
+│       ├── EncoderManager.h/.cpp # Rotary encoder decoding & button debouncing
+│       ├── BuzzerManager.h/.cpp # Audible alerts & alarm patterns
+│       ├── ArgbManager.h / .cpp # Visual status LED lighting cues
+│       ├── UartTransport.h/.cpp # Non-blocking UART reader & transmitter
+│       ├── CommandParser.h/.cpp # Inbound command validation & dispatch
+│       ├── StatusPublisher.h/.cpp # Periodic STATUS telemetry broadcaster
+│       └── WatchdogManager.h/.cpp # Hardware watchdog supervisor
+│
+├── docs/                     # Technical specifications & documentation
+│   ├── firmware-architecture.md # Two-target architecture & module flow
+│   ├── uart-protocol.md      # Wire framing, commands, responses & examples
+│   ├── safety-behavior.md    # Safety rules, interlocks & timeout matrix
+│   ├── hardware-pin-map.md   # Pinout mapping for RP2040 and RP2350B
+│   ├── build-instructions.md # Compilation, upload, and testing guide
+│   ├── hardware_and_safety.md# Physical protections & wiring guide
+│   └── calibration_and_tuning.md # PI loop tuning & sensor calibration
+│
+├── test/                     # Host automated unit & simulation tests
+│   ├── CMakeLists.txt        # CTest build definition
+│   ├── protocol/             # Protocol parsing and command validation tests
+│   ├── serialization/        # Status packet round-trip serialization tests
+│   ├── state-machine/        # State transition and guard tests
+│   └── integration/          # End-to-end command/status simulation tests
+│
+└── assets/                   # Hardware 3D models & CAD reference
+    └── 3d files/             # STL enclosure models & aluminum heatplate reference
 ```
 
 ---
 
-## 3. Hardware Pinout Configuration
+## 3. Physical UART Interconnect & Pin Mapping
 
-| Signal | GPIO Pin | Function / Description | Notes |
-| :--- | :--- | :--- | :--- |
-| `PIN_ENA` | GPIO 2 | Rotary Encoder Phase A | Internal pullup enabled |
-| `PIN_ENB` | GPIO 3 | Rotary Encoder Phase B | Internal pullup enabled |
-| `PIN_EBT` | GPIO 28 | Rotary Encoder Push-Button | Internal pullup enabled (Active LOW) |
-| `PIN_SSR` | GPIO 22 | Solid State Relay Output | 3.3V Logic Drive (Time-Proportioning) |
-| `PIN_NTC1` | GPIO 26 | Primary NTC Thermistor | RP2040 ADC0 (12-bit), 100kΩ divider |
-| `PIN_NTC2` | GPIO 27 | Secondary NTC Thermistor | RP2040 ADC1 (12-bit), 100kΩ divider |
-| `PIN_BACKLIGHT` | GPIO 24 | Display Backlight Control | Active LOW |
-| `TOUCH_SDA` | GPIO 20 | GT911 Touch Controller I2C SDA | Requires 4.7kΩ pullups |
-| `TOUCH_SCL` | GPIO 21 | GT911 Touch Controller I2C SCL | Requires 4.7kΩ pullups |
-| `TOUCH_INT` | GPIO 25 | GT911 Touch Controller Interrupt | Configured in `src/touch.h` |
-| `TOUCH_RST` | GPIO 29 | GT911 Touch Controller Reset | Configured in `src/touch.h` |
-| `SERIAL_TX` | GPIO 0 | Telemetry UART TX (`Serial1`) | 115200 baud |
-| `SERIAL_RX` | GPIO 1 | Telemetry UART RX (`Serial1`) | 115200 baud |
+```text
+CrowPanel GP0 / UART0 TX  ───(Soldered 3.3V wire)───>  Controller UART RX / GP33
+CrowPanel GP1 / UART0 RX  <───(Soldered 3.3V wire)───  Controller UART TX / GP32
+CrowPanel GND             ───────────────────────────  Controller GND
+```
+
+### 3.1 CrowPanel Terminal (RP2040)
+* `GP0`: UART0 TX
+* `GP1`: UART0 RX
+* `GP12-19`: PicoDVI differential pairs
+* `GP20`: Touch I2C SDA
+* `GP21`: Touch I2C SCL
+* `GP24`: Backlight Control (Active LOW)
+* `GP25`: Touch INT
+* `GP29`: Touch RST
+
+### 3.2 Machine Controller (RP2350B)
+* `GP32`: UART TX
+* `GP33`: UART RX
+* `GP22`: PIN_SSR (3.3V Logic time-proportioning)
+* `GP23`: PIN_RELAY (Safety isolation relay)
+* `GP26`: PIN_NTC1 (ADC0, 100kΩ divider)
+* `GP27`: PIN_NTC2 (ADC1, 100kΩ divider)
+* `GP28`: PIN_NTC3 (ADC2, 100kΩ divider)
+* `GP2`: PIN_ENA (Rotary encoder Phase A)
+* `GP3`: PIN_ENB (Rotary encoder Phase B)
+* `GP4`: PIN_EBT (Rotary encoder Button)
+* `GP6`: PIN_FAN1_PWM (25 kHz fan drive)
+* `GP7`: PIN_FAN1_TACH (Tachometer pulse capture)
+* `GP8`: PIN_FAN2_PWM (25 kHz fan drive)
+* `GP9`: PIN_FAN2_TACH (Tachometer pulse capture)
+* `GP10`: PIN_BUZZER (PWM tone output)
+* `GP11`: PIN_ARGB (WS2812B visual status)
 
 ---
 
-## 4. Software Architecture & Execution Rules
+## 4. Software Architecture & Safety Rules
 
-### 4.1 Cooperative Execution Model
-* Firmware execution operates inside a non-blocking cooperative loop in [`Tejasvini.ino`](Tejasvini.ino).
-* Do not introduce blocking calls or long `delay()` statements in `loop()`; use `millis()`-based delta timers.
+### 4.1 Cooperative Non-Blocking Loop
+* Each firmware target runs a cooperative non-blocking loop in its `.ino` file. No blocking `delay()` calls are allowed.
 
-### 4.2 Configuration Management
-* All pin mappings, physical constants, controller gains, safety thresholds, and timing parameters reside in [`src/config.h`](src/config.h). Do not introduce inline magic numbers in source files.
-
-### 4.3 Thermal & Duty Cycle Safety (CRITICAL)
-* **Immediate Raw Bounds Validation**: Raw ADC values and raw calculated temperatures are validated *before* the smoothing filter to detect open or short circuits in $<100\text{ms}$.
-* **Latching Fault Shutdown**: All safety trips must route through `trigger_safety_shutdown()`, which latches `error_state = true`, zeroes `duty` and `acc`, forces `heater = false`, and immediately writes `PIN_SSR` LOW.
-* **`MAX_DUTY` Clamping**: SSR duty cycle is strictly limited to 40% (`MAX_DUTY`) to protect the 400W heatplate and SSR. Do not alter `MAX_DUTY` without explicit authorization.
+### 4.2 Machine Authority & Safety Invariants (CRITICAL)
+* **The Controller is the Sole Authority**: UI never decides whether heating is safe.
+* **Immediate Raw Bounds Validation**: Raw ADC ($50 \le \text{ADC} \le 4050$) and raw temperatures ($-20^\circ\text{C}$ to $300^\circ\text{C}$) are checked before filtering.
+* **Latching Fault Shutdown**: All safety trips route through `trigger_fault()`, which zeroes `duty_pct`, cuts SSR output immediately to LOW, and locks out the heater until explicit `CLEAR_FAULT`.
+* **`MAX_DUTY` Clamping**: SSR duty cycle is strictly limited to 40% (`MAX_DUTY_CYCLE`) to protect the 400W heatplate and SSR.
 * **Emergency Over-Temperature**: Immediate shutoff at 280°C (`OVERTEMP_SHUTDOWN`).
-* **Thermal Runaway Detection**: Validates temperature rise under sustained power within `SAFETY_PERIOD` (18s).
+* **Thermal Runaway Detection**: Validates temperature rise under sustained power within `THERMAL_RUNAWAY_PERIOD_MS` (18s).
+* **Communication Timeout Watchdog**: If heating and no valid packet is received within 5,000ms (`COMM_TIMEOUT_MS`), heater is forced OFF immediately. Cooling fans are never stopped if communication is lost during cooling.
 
 ---
 
 ## 5. Build & Environment Instructions
 
 ### Microcontroller Firmware (Arduino CLI / IDE)
-1. Board Package: Earle F. Philhower RP2040 (`rp2040:rp2040:rpipico`).
-2. Required Arduino Libraries:
-   - `PicoDVI`
-   - `Adafruit_GFX` & `Adafruit_BusIO`
-   - `lvgl` (version 8.3.x)
-   - `RP2040_PWM`
-   - `RPI_PICO_TimerInterrupt`
-   - `TAMC_GT911`
-3. Command-Line Compilation:
-   ```bash
-   arduino-cli compile \
-     -b rp2040:rp2040:rpipico \
-     --build-property "build.extra_flags=-DLV_LVGL_H_INCLUDE_SIMPLE -DLV_USE_OBJ_NAME=1 -DLV_USE_TRANSLATION=1 -Wall -Wextra" \
-     .
-   ```
+* Board Package: Earle F. Philhower RP2040/RP2350 (`rp2040:rp2040:rpipico` for UI, `rp2040:rp2040:rpipico2` for Controller).
+* Build commands:
+  ```bash
+  arduino-cli compile -b rp2040:rp2040:rpipico firmware/Tejasvini_UI/
+  arduino-cli compile -b rp2040:rp2040:rpipico2 firmware/Tejasvini_Controller/
+  ```
+
+### Host Unit & Simulation Test Suite
+```bash
+cmake -B build -S .
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
