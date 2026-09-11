@@ -3,7 +3,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#if __has_include("../shared/Protocol.h")
 #include "../shared/Protocol.h"
+#else
+#include "shared/Protocol.h"
+#endif
 
 class StatusModel {
 public:

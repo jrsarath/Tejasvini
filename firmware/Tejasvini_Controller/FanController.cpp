@@ -1,5 +1,9 @@
 #include "FanController.h"
+#if __has_include("../shared/Config.h")
 #include "../shared/Config.h"
+#else
+#include "shared/Config.h"
+#endif
 #include <Arduino.h>
 
 FanController::FanController(uint8_t pin_fan1_pwm, uint8_t pin_fan2_pwm)

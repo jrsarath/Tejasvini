@@ -2,7 +2,11 @@
 #define TEJASVINI_THERMAL_MANAGER_H_
 
 #include "HeaterController.h"
+#if __has_include("../shared/ErrorCodes.h")
 #include "../shared/ErrorCodes.h"
+#else
+#include "shared/ErrorCodes.h"
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 

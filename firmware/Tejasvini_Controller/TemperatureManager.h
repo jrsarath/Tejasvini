@@ -2,7 +2,11 @@
 #define TEJASVINI_TEMPERATURE_MANAGER_H_
 
 #include "NtcSensor.h"
+#if __has_include("../shared/ErrorCodes.h")
 #include "../shared/ErrorCodes.h"
+#else
+#include "shared/ErrorCodes.h"
+#endif
 
 class TemperatureManager {
 public:

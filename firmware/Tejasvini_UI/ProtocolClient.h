@@ -3,8 +3,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#if __has_include("../shared/Config.h")
 #include "../shared/Config.h"
 #include "../shared/Protocol.h"
+#else
+#include "shared/Config.h"
+#include "shared/Protocol.h"
+#endif
 #include "StatusModel.h"
 
 class ProtocolClient {

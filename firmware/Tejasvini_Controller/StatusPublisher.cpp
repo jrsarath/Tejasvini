@@ -1,5 +1,9 @@
 #include "StatusPublisher.h"
+#if __has_include("../shared/Serialization.h")
 #include "../shared/Serialization.h"
+#else
+#include "shared/Serialization.h"
+#endif
 #include <Arduino.h>
 
 StatusPublisher::StatusPublisher(UartTransport& transport,

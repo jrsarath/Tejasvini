@@ -1,5 +1,9 @@
 #include "NtcSensor.h"
+#if __has_include("../shared/Config.h")
 #include "../shared/Config.h"
+#else
+#include "shared/Config.h"
+#endif
 #include <Arduino.h>
 #include <math.h>
 

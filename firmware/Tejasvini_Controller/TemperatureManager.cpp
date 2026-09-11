@@ -1,5 +1,9 @@
 #include "TemperatureManager.h"
+#if __has_include("../shared/Config.h")
 #include "../shared/Config.h"
+#else
+#include "shared/Config.h"
+#endif
 #include <math.h>
 
 TemperatureManager::TemperatureManager(uint8_t pin_ntc1, uint8_t pin_ntc2, uint8_t pin_ntc3)
