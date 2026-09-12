@@ -3,21 +3,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#if __has_include("../shared/Config.h")
-#include "../shared/Config.h"
-#else
-#include "shared/Config.h"
-#endif
-#if __has_include("../shared/Types.h")
-#include "../shared/Types.h"
-#else
-#include "shared/Types.h"
-#endif
-#if __has_include("../shared/ErrorCodes.h")
-#include "../shared/ErrorCodes.h"
-#else
-#include "shared/ErrorCodes.h"
-#endif
+#include "Config.h"
+#include "Types.h"
+#include "ErrorCodes.h"
 
 class MachineStateMachine {
 public:

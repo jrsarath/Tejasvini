@@ -2,11 +2,7 @@
 #define TEJASVINI_FAN_CONTROLLER_H_
 
 #include <stdint.h>
-#if __has_include("../shared/Types.h")
-#include "../shared/Types.h"
-#else
-#include "shared/Types.h"
-#endif
+#include "Types.h"
 
 class FanController {
 public:

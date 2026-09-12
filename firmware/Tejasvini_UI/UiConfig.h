@@ -1,11 +1,7 @@
 #ifndef TEJASVINI_UI_CONFIG_H_
 #define TEJASVINI_UI_CONFIG_H_
 
-#if __has_include("../shared/Config.h")
-#include "../shared/Config.h"
-#else
-#include "shared/Config.h"
-#endif
+#include "Config.h"
 #include <Arduino.h>
 
 /*******************************************************************************

@@ -26,12 +26,12 @@ The EEZ Studio project file is located at the root of the repository:
 
 The project is pre-configured to export generated C code directly into the CrowPanel UI firmware source tree:
 
-* **Configured Destination**: `firmware/Tejasvini_UI/ui`
+* **Configured Destination**: `firmware/Tejasvini_UI/src/ui`
 * **Target Firmware Binary**: `Tejasvini_UI` (`firmware/Tejasvini_UI/Tejasvini_UI.ino`)
 
 The setting in `ui.eez-project` is:
 ```json
-"destinationFolder": "firmware/Tejasvini_UI/ui"
+"destinationFolder": "firmware/Tejasvini_UI/src/ui"
 ```
 
 ---
@@ -40,7 +40,7 @@ The setting in `ui.eez-project` is:
 
 To prevent generated code from overwriting application logic, the project enforces a strict boundary between automatically generated files and handwritten code:
 
-### 4.1 Automatically Generated Files (`firmware/Tejasvini_UI/ui/`)
+### 4.1 Automatically Generated Files (`firmware/Tejasvini_UI/src/ui/`)
 These files are **overwritten** whenever code is generated from EEZ Studio. **Do not edit these files manually**:
 * `screens.c` / `screens.h`: Screen layouts, object widgets, and coordinate trees.
 * `styles.c` / `styles.h`: Visual styles, padding, and theme colors.
@@ -52,9 +52,9 @@ These files are **overwritten** whenever code is generated from EEZ Studio. **Do
 * `vars.h`: Generated C declarations for UI variable getters and setters.
 
 ### 4.2 Handwritten Application & Bridge Files (`firmware/Tejasvini_UI/`)
-These files reside **outside** the `ui/` directory and are **never touched by EEZ Studio**:
-* [`UiActions.cpp`](../firmware/Tejasvini_UI/UiActions.cpp): Implements the event handlers declared in `ui/actions.h`. Delegates events to `UiBridge` and `ProtocolClient`.
-* [`UiVars.cpp`](../firmware/Tejasvini_UI/UiVars.cpp): Implements all `get_var_...()` and `set_var_...()` declared in `ui/vars.h`. Reads state from `StatusModel`.
+These files reside **outside** the `src/ui/` directory and are **never touched by EEZ Studio**:
+* [`UiActions.cpp`](../firmware/Tejasvini_UI/UiActions.cpp): Implements the event handlers declared in `src/ui/actions.h`. Delegates events to `UiBridge` and `ProtocolClient`.
+* [`UiVars.cpp`](../firmware/Tejasvini_UI/UiVars.cpp): Implements all `get_var_...()` and `set_var_...()` declared in `src/ui/vars.h`. Reads state from `StatusModel`.
 * [`UiBridge.h / .cpp`](../firmware/Tejasvini_UI/UiBridge.h): C-linkage bridge providing clean decoupling between LVGL and C++ application classes.
 * [`StatusModel.h / .cpp`](../firmware/Tejasvini_UI/StatusModel.h): Cached telemetry state model populated by incoming UART `STATUS` packets.
 * [`ProtocolClient.h / .cpp`](../firmware/Tejasvini_UI/ProtocolClient.h): Transmits high-level commands (`START_PROFILE`, `STOP`, `SET_TARGET`) to the RP2350B controller.
@@ -74,9 +74,9 @@ Whenever you modify widgets, screens, fonts, or themes in EEZ Studio:
    * Click the **Generate Code** button (or press `Ctrl+B` / `Cmd+B`).
    * Alternatively, select **Project** $\to$ **Build / Generate Code** from the menu.
 3. **Verify Export Location**:
-   * Inspect `git status` to verify modified files appear strictly in `firmware/Tejasvini_UI/ui/`:
+   * Inspect `git status` to verify modified files appear strictly in `firmware/Tejasvini_UI/src/ui/`:
      ```bash
-     git status firmware/Tejasvini_UI/ui/
+     git status firmware/Tejasvini_UI/src/ui/
      ```
    * Confirm no files were written to obsolete directories or temporary folders.
 4. **Hook Up New Actions or Variables (if added)**:
@@ -84,5 +84,5 @@ Whenever you modify widgets, screens, fonts, or themes in EEZ Studio:
    * If you added a new Variable in EEZ Studio, implement its getter/setter in [`firmware/Tejasvini_UI/UiVars.cpp`](../firmware/Tejasvini_UI/UiVars.cpp).
 5. **Verify Compilation**:
    ```bash
-   arduino-cli compile -b rp2040:rp2040:rpipico firmware/Tejasvini_UI/
+   arduino-cli compile -b rp2040:rp2040:rpipico --library firmware/shared --build-property "build.extra_flags=-DLV_LVGL_H_INCLUDE_SIMPLE -DLV_USE_OBJ_NAME=1" firmware/Tejasvini_UI/
    ```

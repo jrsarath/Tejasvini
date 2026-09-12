@@ -3,9 +3,9 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "../../firmware/shared/Protocol.h"
-#include "../../firmware/shared/Serialization.h"
-#include "../../firmware/Tejasvini_Controller/MachineStateMachine.h"
+#include "Protocol.h"
+#include "Serialization.h"
+#include "MachineStateMachine.h"
 
 // Mock Controller Harness for Host-Side Integration Testing
 class MockControllerHarness {

@@ -35,16 +35,18 @@ Install the following libraries via the Arduino IDE Library Manager or `arduino-
 ```bash
 arduino-cli compile \
   -b rp2040:rp2040:rpipico \
+  --library firmware/shared \
   --build-property "build.extra_flags=-DLV_LVGL_H_INCLUDE_SIMPLE -DLV_USE_OBJ_NAME=1 -Wall -Wextra" \
   firmware/Tejasvini_UI/
 ```
 
 ### Arduino IDE Steps
 1. Open Arduino IDE.
-2. Open [`firmware/Tejasvini_UI/Tejasvini_UI.ino`](../firmware/Tejasvini_UI/Tejasvini_UI.ino).
-3. Select Board: **Raspberry Pi Pico**.
-4. Set **CPU Speed**: **133 MHz** (or **250 MHz**).
-5. Click **Verify / Compile**.
+2. Ensure `firmware/shared` is accessible to the IDE (either by copying/linking to your `Arduino/libraries/` folder or setting sketchbook directory).
+3. Open [`firmware/Tejasvini_UI/Tejasvini_UI.ino`](../firmware/Tejasvini_UI/Tejasvini_UI.ino).
+4. Select Board: **Raspberry Pi Pico**.
+5. Set **CPU Speed**: **133 MHz** (or **250 MHz**).
+6. Click **Verify / Compile**.
 
 ---
 
@@ -59,6 +61,7 @@ arduino-cli compile \
 ```bash
 arduino-cli compile \
   -b rp2040:rp2040:rpipico2 \
+  --library firmware/shared \
   --build-property "build.extra_flags=-Wall -Wextra" \
   firmware/Tejasvini_Controller/
 ```

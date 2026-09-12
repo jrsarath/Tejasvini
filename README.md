@@ -46,7 +46,8 @@ Tejasvini/
 ├── ui.eez-project            # EEZ Studio LVGL project source file
 │
 ├── firmware/
-│   ├── shared/               # Shared protocol, error codes, and configuration
+│   ├── shared/               # Canonical shared Arduino library (library.properties)
+│   │   ├── library.properties# Standard Arduino 1.5 library specification
 │   │   ├── Config.h          # Shared timing, temperature bounds, baud rate
 │   │   ├── Types.h / .cpp    # Machine states, reflow profiles, stage enums
 │   │   ├── ErrorCodes.h/.cpp # Fault codes and severity levels
@@ -63,7 +64,9 @@ Tejasvini/
 │   │   ├── StatusModel.h/.cpp    # Cached state model for LVGL variables
 │   │   ├── ProtocolClient.h/.cpp # Non-blocking UART client & heartbeat monitor
 │   │   ├── UiBridge.h / .cpp # C-linkage bridge to UI events and variables
-│   │   └── ui/               # EEZ Studio generated LVGL UI screens and styles
+│   │   ├── UiVars.cpp        # EEZ Studio variable bridge bindings
+│   │   ├── UiActions.cpp     # EEZ Studio action bridge callbacks
+│   │   └── src/ui/           # EEZ Studio generated LVGL UI screens and styles
 │   │
 │   └── Tejasvini_Controller/ # Machine Controller Target (RP2350B)
 │       ├── Tejasvini_Controller.ino # Controller entry point
@@ -128,12 +131,12 @@ See [docs/build-instructions.md](docs/build-instructions.md) for full setup inst
 
 ```bash
 # Compile UI firmware (RP2040 CrowPanel)
-arduino-cli compile -b rp2040:rp2040:rpipico firmware/Tejasvini_UI/
+arduino-cli compile -b rp2040:rp2040:rpipico --library firmware/shared --build-property "build.extra_flags=-DLV_LVGL_H_INCLUDE_SIMPLE -DLV_USE_OBJ_NAME=1" firmware/Tejasvini_UI/
 
 # Compile Controller firmware (RP2350B Board)
-arduino-cli compile -b rp2040:rp2040:rpipico2 firmware/Tejasvini_Controller/
+arduino-cli compile -b rp2040:rp2040:rpipico2 --library firmware/shared firmware/Tejasvini_Controller/
 
-# Run host unit and simulation test suite
+# Run host unit, simulation, and repository validation tests
 cmake -B build -S .
 cmake --build build
 ctest --test-dir build --output-on-failure

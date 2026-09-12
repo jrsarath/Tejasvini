@@ -1,5 +1,5 @@
 #include "UiBridge.h"
-#include "ui/vars.h"
+#include "src/ui/vars.h"
 #include <stdlib.h>
 #include <string.h>
 

@@ -54,3 +54,8 @@ add_executable(test_end_to_end_sim
     ${STATE_MACHINE_SOURCES}
 )
 add_test(NAME EndToEndSimulationTests COMMAND test_end_to_end_sim)
+
+# 5. Repository Architecture Validation Test
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME RepositoryValidation COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/validate_shared.py)
+

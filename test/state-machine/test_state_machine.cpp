@@ -1,7 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
-#include "../../firmware/Tejasvini_Controller/MachineStateMachine.h"
+#include "MachineStateMachine.h"
 
 void test_initial_state() {
     MachineStateMachine fsm;

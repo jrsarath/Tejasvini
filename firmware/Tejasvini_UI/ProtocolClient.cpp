@@ -1,9 +1,5 @@
 #include "ProtocolClient.h"
-#if __has_include("../shared/Serialization.h")
-#include "../shared/Serialization.h"
-#else
-#include "shared/Serialization.h"
-#endif
+#include "Serialization.h"
 #include <Arduino.h>
 #include <string.h>
 

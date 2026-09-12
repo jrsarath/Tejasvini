@@ -77,7 +77,8 @@ Tejasvini/
 ├── ui.eez-project            # EEZ Studio LVGL project source file
 │
 ├── firmware/
-│   ├── shared/               # Shared protocol, types, errors, configuration
+│   ├── shared/               # Canonical shared Arduino library (library.properties)
+│   │   ├── library.properties# Standard Arduino 1.5 library specification
 │   │   ├── Config.h          # Shared timing and safety bounds
 │   │   ├── Types.h / .cpp    # State, profile, and stage definitions
 │   │   ├── ErrorCodes.h/.cpp # Fault codes and severities
@@ -104,9 +105,11 @@ Tejasvini/
 │       ├── UiBridge.h / .cpp # C-linkage bridge to UI events and variables
 │       ├── UiActions.cpp     # Handwritten EEZ action implementations
 │       ├── UiVars.cpp        # Handwritten EEZ variable getters/setters
-│       └── ui/               # Strictly EEZ Studio generated LVGL screens & styles
+│       └── src/ui/           # Strictly EEZ Studio generated LVGL screens & styles
 │
 ├── docs/                     # Technical documentation & specifications
+├── scripts/                  # Repository validation and maintenance scripts
+│   └── validate_shared.py    # Architecture & zero-symlink validator
 └── test/                     # Host automated unit & simulation tests
 ```
 
@@ -127,8 +130,12 @@ Tejasvini/
 5. **Compiler Warnings**:
    * Code must compile cleanly with `-Wall -Wextra` without introducing new compiler warnings.
 6. **EEZ Studio UI Separation**:
-   * Generated files belong strictly in `firmware/Tejasvini_UI/ui/`.
-   * Handwritten event actions and variable binding implementations belong in `firmware/Tejasvini_UI/UiActions.cpp` and `firmware/Tejasvini_UI/UiVars.cpp`. Never write handwritten code inside `ui/` files that get regenerated.
+   * Generated files belong strictly in `firmware/Tejasvini_UI/src/ui/`.
+   * Handwritten event actions and variable binding implementations belong in `firmware/Tejasvini_UI/UiActions.cpp` and `firmware/Tejasvini_UI/UiVars.cpp`. Never write handwritten code inside `src/ui/` files that get regenerated.
+7. **Canonical Shared Directory & Zero Symlinks Invariant**:
+   * All shared definitions must reside in `firmware/shared/`.
+   * No symlinks, junctions, or duplicate shared directories are permitted anywhere in the repository.
+   * All includes must be direct canonical headers (`#include "Config.h"`, `#include "Protocol.h"`, etc.).
 
 ---
 
@@ -136,10 +143,16 @@ Tejasvini/
 
 Before opening a pull request, perform the following validation steps:
 
-1. **Host Automated Tests**:
-   Run `ctest --test-dir build --output-on-failure`. All protocol, serialization, state machine, and simulation tests must pass.
-2. **Firmware Compilation Check**:
-   Confirm that both `Tejasvini_Controller` and `Tejasvini_UI` compile cleanly with 0 errors.
+1. **Repository Architecture Validation**:
+   Run `python3 scripts/validate_shared.py` (or through CTest). Confirms zero symlinks, exactly 1 shared directory, no duplicate headers, and correct includes.
+2. **Host Automated Tests**:
+   Run `ctest --test-dir build --output-on-failure`. All protocol, serialization, state machine, simulation, and repository validation tests must pass.
+3. **Firmware Compilation Check**:
+   Confirm that both `Tejasvini_Controller` and `Tejasvini_UI` compile cleanly with 0 errors via `arduino-cli`:
+   ```bash
+   arduino-cli compile -b rp2040:rp2040:rpipico2 --library firmware/shared firmware/Tejasvini_Controller/
+   arduino-cli compile -b rp2040:rp2040:rpipico --library firmware/shared --build-property "build.extra_flags=-DLV_LVGL_H_INCLUDE_SIMPLE -DLV_USE_OBJ_NAME=1" firmware/Tejasvini_UI/
+   ```
 3. **Safety Interlock Testing**:
    If your change affects sensor acquisition or heating:
    * **Open Circuit**: Disconnected NTC must trip safety shutdown in $< 100\text{ms}$.

@@ -4,8 +4,8 @@
 #include <lvgl.h>
 
 extern "C" {
-#include "ui/ui.h"
-#include "ui/screens.h"
+#include "src/ui/ui.h"
+#include "src/ui/screens.h"
 }
 
 static DVIGFX16 display(DVI_RES_400x240p60, picodvi_dvi_cfg, VREG_VOLTAGE_1_25);

@@ -1,8 +1,8 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
-#include "../../firmware/shared/Protocol.h"
-#include "../../firmware/shared/Serialization.h"
+#include "Protocol.h"
+#include "Serialization.h"
 
 void test_parse_commands() {
     CommandPacket pkt;

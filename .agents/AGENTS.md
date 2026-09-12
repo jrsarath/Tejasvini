@@ -35,7 +35,8 @@ Tejasvini/
 ├── ui.eez-project            # EEZ Studio LVGL project source file
 │
 ├── firmware/
-│   ├── shared/               # Shared protocol, error codes, and configuration
+│   ├── shared/               # Canonical shared Arduino library (library.properties)
+│   │   ├── library.properties# Standard Arduino 1.5 library specification
 │   │   ├── Config.h          # Shared timing, temperature bounds, baud rate
 │   │   ├── Types.h / .cpp    # Machine states, reflow profiles, stage enums
 │   │   ├── ErrorCodes.h/.cpp # Fault codes and severity levels
@@ -52,7 +53,9 @@ Tejasvini/
 │   │   ├── StatusModel.h/.cpp    # Cached state model for LVGL variables
 │   │   ├── ProtocolClient.h/.cpp # Non-blocking UART client & heartbeat monitor
 │   │   ├── UiBridge.h / .cpp # C-linkage bridge to UI events and variables
-│   │   └── ui/               # EEZ Studio generated LVGL UI screens and styles
+│   │   ├── UiVars.cpp        # EEZ Studio variable bridge bindings
+│   │   ├── UiActions.cpp     # EEZ Studio action bridge callbacks
+│   │   └── src/ui/           # EEZ Studio generated LVGL UI screens and styles
 │   │
 │   └── Tejasvini_Controller/ # Machine Controller Target (RP2350B)
 │       ├── Tejasvini_Controller.ino # Controller entry point
@@ -148,16 +151,22 @@ CrowPanel GND             ──────────────────
 * **Thermal Runaway Detection**: Validates temperature rise under sustained power within `THERMAL_RUNAWAY_PERIOD_MS` (18s).
 * **Communication Timeout Watchdog**: If heating and no valid packet is received within 5,000ms (`COMM_TIMEOUT_MS`), heater is forced OFF immediately. Cooling fans are never stopped if communication is lost during cooling.
 
+### 4.3 Architecture Invariant — Canonical Shared Library & Zero Symlinks (CRITICAL)
+* **Single Canonical Location**: `firmware/shared/` is the **only** shared-code directory in the repository. It is packaged as an official Arduino 1.5 library via `library.properties` (`Tejasvini_Shared`).
+* **Zero Symlinks Rule**: The repository strictly forbids symlinks and junctions. All code and build processes must resolve directly without symlink dependencies.
+* **Direct Header Inclusion**: All source files include shared headers directly (`#include "Config.h"`, `#include "Protocol.h"`, etc.). Never use relative path prefixes like `../shared/` or conditional `#if __has_include` workarounds.
+* **EEZ Studio Export Boundary**: Generated UI files export strictly to `firmware/Tejasvini_UI/src/ui/`. Never export into `shared` or arbitrary directories outside `src/`.
+
 ---
 
 ## 5. Build & Environment Instructions
 
 ### Microcontroller Firmware (Arduino CLI / IDE)
 * Board Package: Earle F. Philhower RP2040/RP2350 (`rp2040:rp2040:rpipico` for UI, `rp2040:rp2040:rpipico2` for Controller).
-* Build commands:
+* Build commands (note `--library firmware/shared` flag):
   ```bash
-  arduino-cli compile -b rp2040:rp2040:rpipico firmware/Tejasvini_UI/
-  arduino-cli compile -b rp2040:rp2040:rpipico2 firmware/Tejasvini_Controller/
+  arduino-cli compile -b rp2040:rp2040:rpipico --library firmware/shared --build-property "build.extra_flags=-DLV_LVGL_H_INCLUDE_SIMPLE -DLV_USE_OBJ_NAME=1" firmware/Tejasvini_UI/
+  arduino-cli compile -b rp2040:rp2040:rpipico2 --library firmware/shared firmware/Tejasvini_Controller/
   ```
 
 ### Host Unit & Simulation Test Suite

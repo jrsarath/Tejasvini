@@ -2,8 +2,8 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
-#include "../../firmware/shared/Protocol.h"
-#include "../../firmware/shared/Serialization.h"
+#include "Protocol.h"
+#include "Serialization.h"
 
 void test_status_round_trip() {
     StatusPacket src;
