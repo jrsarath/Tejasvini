@@ -9,8 +9,8 @@
 
 #include "UiApp.h"
 
-static UiApp g_ui_app;
+static UiApp ui_app;
 
-void setup() { g_ui_app.setup(); }
+void setup() { ui_app.setup(); }
 
-void loop() { g_ui_app.loop(); }
+void loop() { ui_app.loop(); }

@@ -9,8 +9,8 @@
 
 #include "ControllerApp.h"
 
-static ControllerApp g_controller_app;
+static ControllerApp controller_app;
 
-void setup() { g_controller_app.setup(); }
+void setup() { controller_app.setup(); }
 
-void loop() { g_controller_app.loop(); }
+void loop() { controller_app.loop(); }
